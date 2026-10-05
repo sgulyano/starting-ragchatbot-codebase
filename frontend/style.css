@@ -22,6 +22,114 @@
     --focus-ring: rgba(37, 99, 235, 0.2);
     --welcome-bg: #1e3a5f;
     --welcome-border: #2563eb;
+    --link-color: #93c5fd;
+    --link-hover: #dbeafe;
+    --link-border: rgba(147, 197, 253, 0.35);
+    --link-bg: rgba(37, 99, 235, 0.15);
+    --link-bg-hover: rgba(37, 99, 235, 0.35);
+    --code-bg: rgba(0, 0, 0, 0.2);
+    --welcome-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --error-text: #f87171;
+    --success-text: #4ade80;
+    --toggle-icon: #fbbf24;
+}
+
+/* Light theme */
+:root[data-theme="light"] {
+    --primary-color: #1d4ed8;
+    --primary-hover: #1e40af;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-hover: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #cbd5e1;
+    --user-message: #1d4ed8;
+    --assistant-message: #e2e8f0;
+    --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+    --focus-ring: rgba(29, 78, 216, 0.3);
+    --welcome-bg: #dbeafe;
+    --welcome-border: #1d4ed8;
+    --link-color: #1d4ed8;
+    --link-hover: #1e3a8a;
+    --link-border: rgba(29, 78, 216, 0.4);
+    --link-bg: rgba(29, 78, 216, 0.08);
+    --link-bg-hover: rgba(29, 78, 216, 0.18);
+    --code-bg: rgba(15, 23, 42, 0.07);
+    --welcome-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --error-text: #b91c1c;
+    --success-text: #15803d;
+    --toggle-icon: #1d4ed8;
+}
+
+/* Smooth theme transitions (class applied briefly by script while toggling) */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+    transition: background-color 0.35s ease, color 0.35s ease,
+                border-color 0.35s ease, box-shadow 0.35s ease !important;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--toggle-icon);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.35s ease;
+}
+
+.theme-toggle:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle svg {
+    position: absolute;
+    transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+/* Dark theme shows the sun (click to go light); light theme shows the moon */
+.theme-toggle .icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+}
+
+:root[data-theme="light"] .theme-toggle .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+}
+
+:root[data-theme="light"] .theme-toggle .icon-moon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.theme-transition,
+    html.theme-transition *,
+    .theme-toggle svg {
+        transition: none !important;
+    }
 }
 
 /* Base Styles */
@@ -264,9 +372,9 @@ header h1 {
 }
 
 .sources-content a {
-    color: #93c5fd;
-    border-color: rgba(147, 197, 253, 0.35);
-    background: rgba(37, 99, 235, 0.15);
+    color: var(--link-color);
+    border-color: var(--link-border);
+    background: var(--link-bg);
     text-decoration: none;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -277,9 +385,9 @@ header h1 {
 }
 
 .sources-content a:hover {
-    color: #dbeafe;
-    background: rgba(37, 99, 235, 0.35);
-    border-color: #93c5fd;
+    color: var(--link-hover);
+    background: var(--link-bg-hover);
+    border-color: var(--link-color);
 }
 
 /* Markdown formatting styles */
@@ -314,7 +422,7 @@ header h1 {
 }
 
 .message-content code {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.125rem 0.25rem;
     border-radius: 3px;
     font-family: 'Fira Code', 'Consolas', monospace;
@@ -322,7 +430,7 @@ header h1 {
 }
 
 .message-content pre {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.75rem;
     border-radius: 4px;
     overflow-x: auto;
@@ -345,7 +453,7 @@ header h1 {
 .message.welcome-message .message-content {
     background: var(--surface);
     border: 2px solid var(--border-color);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--welcome-shadow);
     position: relative;
 }
 
@@ -465,7 +573,7 @@ header h1 {
 /* Error Message */
 .error-message {
     background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    color: var(--error-text);
     padding: 0.75rem 1.25rem;
     border-radius: 8px;
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -475,7 +583,7 @@ header h1 {
 /* Success Message */
 .success-message {
     background: rgba(34, 197, 94, 0.1);
-    color: #4ade80;
+    color: var(--success-text);
     padding: 0.75rem 1.25rem;
     border-radius: 8px;
     border: 1px solid rgba(34, 197, 94, 0.2);
