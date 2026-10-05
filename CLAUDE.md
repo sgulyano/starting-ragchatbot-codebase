@@ -17,8 +17,9 @@ cd backend && uv run uvicorn app:app --reload --port 8000   # manual start
 - Web UI: http://localhost:8000 — API docs: http://localhost:8000/docs
 - Requires `OLLAMA_API_KEY` in a root-level `.env` (see `.env.example`). `OLLAMA_MODEL` and `OLLAMA_BASE_URL` are optional overrides. The model must support tools; see https://ollama.com/api/tags for the cloud models available.
 - Tool definitions use Ollama's function-calling shape (`{"type": "function", "function": {name, description, parameters}}`). `ToolManager.register_tool` reads the name from `function.name`.
+- `./scripts/format.sh` formats Python code with black; `./scripts/check.sh` verifies formatting without changing files (run before committing). Black config is in `pyproject.toml`.
 - Always use `uv run` / `uv add` rather than `pip`.
-- There is no test suite or linter configured. `main.py` at the root is an unused placeholder.
+- There is no linter configured (black handles formatting). `main.py` at the root is an unused placeholder.
 
 ## Architecture
 

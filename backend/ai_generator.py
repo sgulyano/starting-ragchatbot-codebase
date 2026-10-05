@@ -5,14 +5,17 @@ from typing import List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 LLM_ERROR_FALLBACK = "Sorry, I couldn't reach the language model. Please try again."
-EMPTY_FALLBACK = "I wasn't able to produce an answer. Please try rephrasing your question."
+EMPTY_FALLBACK = (
+    "I wasn't able to produce an answer. Please try rephrasing your question."
+)
+
 
 class AIGenerator:
     """Handles interactions with Ollama Cloud chat API for generating responses"""
 
     # Maximum sequential rounds in which the model may call tools per query
     MAX_TOOL_ROUNDS = 2
-    
+
     # Static system prompt to avoid rebuilding on each call
     SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
 
@@ -45,7 +48,7 @@ All responses must be:
 4. **Example-supported** - Include relevant examples when they aid understanding
 Provide only the direct answer to what was asked.
 """
-    
+
     def __init__(self, api_key: str, model: str, host: str):
         self.client = Client(host=host, headers={"Authorization": f"Bearer {api_key}"})
         self.model = model
@@ -53,13 +56,16 @@ Provide only the direct answer to what was asked.
         # Pre-build base API parameters
         self.base_params = {
             "model": self.model,
-            "options": {"temperature": 0, "num_predict": 800}
+            "options": {"temperature": 0, "num_predict": 800},
         }
 
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with optional tool usage and conversation context.
 
@@ -83,7 +89,7 @@ Provide only the direct answer to what was asked.
         # Ollama takes the system prompt as the first message
         messages = [
             {"role": "system", "content": system_content},
-            {"role": "user", "content": query}
+            {"role": "user", "content": query},
         ]
 
         can_use_tools = bool(tools and tool_manager)
@@ -102,7 +108,9 @@ Provide only the direct answer to what was asked.
 
             rounds += 1
             messages.append(message)
-            tool_messages, failed = self._execute_tool_calls(message.tool_calls, tool_manager)
+            tool_messages, failed = self._execute_tool_calls(
+                message.tool_calls, tool_manager
+            )
             messages.extend(tool_messages)
             if failed:
                 break
@@ -136,7 +144,9 @@ Provide only the direct answer to what was asked.
         for tool_call in tool_calls:
             name = tool_call.function.name
             try:
-                result = tool_manager.execute_tool(name, **(tool_call.function.arguments or {}))
+                result = tool_manager.execute_tool(
+                    name, **(tool_call.function.arguments or {})
+                )
             except Exception as e:
                 logger.exception("Tool %s failed", name)
                 result, failed = f"Error executing {name}: {e}", True
