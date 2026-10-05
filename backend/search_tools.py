@@ -8,7 +8,7 @@ class Tool(ABC):
     
     @abstractmethod
     def get_tool_definition(self) -> Dict[str, Any]:
-        """Return Anthropic tool definition for this tool"""
+        """Return Ollama (function-calling) tool definition for this tool"""
         pass
     
     @abstractmethod
@@ -25,27 +25,30 @@ class CourseSearchTool(Tool):
         self.last_sources = []  # Track sources from last search
     
     def get_tool_definition(self) -> Dict[str, Any]:
-        """Return Anthropic tool definition for this tool"""
+        """Return Ollama (function-calling) tool definition for this tool"""
         return {
-            "name": "search_course_content",
-            "description": "Search course materials with smart course name matching and lesson filtering",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string", 
-                        "description": "What to search for in the course content"
+            "type": "function",
+            "function": {
+                "name": "search_course_content",
+                "description": "Search course materials with smart course name matching and lesson filtering",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string", 
+                            "description": "What to search for in the course content"
+                        },
+                        "course_name": {
+                            "type": "string",
+                            "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                        },
+                        "lesson_number": {
+                            "type": "integer",
+                            "description": "Specific lesson number to search within (e.g. 1, 2, 3)"
+                        }
                     },
-                    "course_name": {
-                        "type": "string",
-                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
-                    },
-                    "lesson_number": {
-                        "type": "integer",
-                        "description": "Specific lesson number to search within (e.g. 1, 2, 3)"
-                    }
-                },
-                "required": ["query"]
+                    "required": ["query"]
+                }
             }
         }
     
@@ -88,8 +91,9 @@ class CourseSearchTool(Tool):
     def _format_results(self, results: SearchResults) -> str:
         """Format search results with course and lesson context"""
         formatted = []
-        sources = []  # Track sources for the UI
-        
+        sources = []  # Track sources ({label, url}) for the UI
+        link_cache = {}  # (course_title, lesson_num) -> lesson link
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
@@ -104,14 +108,64 @@ class CourseSearchTool(Tool):
             source = course_title
             if lesson_num is not None:
                 source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
+            url = None
+            if lesson_num is not None:
+                key = (course_title, lesson_num)
+                if key not in link_cache:
+                    link_cache[key] = self.store.get_lesson_link(course_title, lesson_num)
+                url = link_cache[key]
+            entry = {"label": source, "url": url}
+            if entry not in sources:
+                sources.append(entry)
+
             formatted.append(f"{header}\n{doc}")
         
         # Store sources for retrieval
         self.last_sources = sources
         
         return "\n\n".join(formatted)
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course's outline (title, link, lesson list) from the course catalog"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Ollama (function-calling) tool definition for this tool"""
+        return {
+            "type": "function",
+            "function": {
+                "name": "get_course_outline",
+                "description": "Get the outline of a course: its title, course link, and the complete list of lessons (number and title)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "course_title": {
+                            "type": "string",
+                            "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                        }
+                    },
+                    "required": ["course_title"]
+                }
+            }
+        }
+
+    def execute(self, course_title: str) -> str:
+        """Return the formatted outline for the best-matching course"""
+        outline = self.store.get_course_outline(course_title)
+        if not outline:
+            return f"No course found matching '{course_title}'."
+
+        lines = [
+            f"Course: {outline['title']}",
+            f"Course Link: {outline['course_link'] or 'N/A'}",
+            f"Lessons ({len(outline['lessons'])}):"
+        ]
+        for lesson in outline['lessons']:
+            lines.append(f"- Lesson {lesson['lesson_number']}: {lesson['lesson_title']}")
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""
@@ -122,14 +176,14 @@ class ToolManager:
     def register_tool(self, tool: Tool):
         """Register any tool that implements the Tool interface"""
         tool_def = tool.get_tool_definition()
-        tool_name = tool_def.get("name")
+        tool_name = tool_def.get("function", {}).get("name")
         if not tool_name:
             raise ValueError("Tool must have a 'name' in its definition")
         self.tools[tool_name] = tool
 
     
     def get_tool_definitions(self) -> list:
-        """Get all tool definitions for Anthropic tool calling"""
+        """Get all tool definitions for Ollama tool calling"""
         return [tool.get_tool_definition() for tool in self.tools.values()]
     
     def execute_tool(self, tool_name: str, **kwargs) -> str:

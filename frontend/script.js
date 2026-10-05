@@ -3,6 +3,7 @@ const API_URL = '/api';
 
 // Global state
 let currentSessionId = null;
+let currentRequest = null; // AbortController for the in-flight query
 
 // DOM elements
 let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
@@ -30,6 +31,8 @@ function setupEventListeners() {
     });
     
     
+    document.getElementById('newChatButton').addEventListener('click', startNewChat);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -59,9 +62,13 @@ async function sendMessage() {
     chatMessages.appendChild(loadingMessage);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
+    const controller = new AbortController();
+    currentRequest = controller;
+
     try {
         const response = await fetch(`${API_URL}/query`, {
             method: 'POST',
+            signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -85,13 +92,18 @@ async function sendMessage() {
         addMessage(data.answer, 'assistant', data.sources);
 
     } catch (error) {
+        // Aborted by "New Chat": the chat was already reset, so show nothing
+        if (error.name === 'AbortError') return;
         // Replace loading message with error
         loadingMessage.remove();
         addMessage(`Error: ${error.message}`, 'assistant');
     } finally {
-        chatInput.disabled = false;
-        sendButton.disabled = false;
-        chatInput.focus();
+        if (currentRequest === controller) {
+            currentRequest = null;
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+            chatInput.focus();
+        }
     }
 }
 
@@ -122,10 +134,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        const sourcesHtml = sources.map(s => {
+            const label = escapeHtml(s.label);
+            return s.url
+                ? `<a href="${encodeURI(s.url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+                : `<span class="source-chip">${label}</span>`;
+        }).join('');
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${sourcesHtml}</div>
             </details>
         `;
     }
@@ -150,6 +168,27 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+// Discard the current conversation (frontend + backend) and start fresh, no reload
+function startNewChat() {
+    if (currentRequest) {
+        currentRequest.abort();
+        currentRequest = null;
+    }
+
+    const oldSessionId = currentSessionId;
+    if (oldSessionId) {
+        // Fire-and-forget; a failed cleanup only leaves an idle in-memory session
+        fetch(`${API_URL}/session/${encodeURIComponent(oldSessionId)}`, { method: 'DELETE' })
+            .catch(error => console.error('Failed to delete session:', error));
+    }
+
+    createNewSession();
+    chatInput.value = '';
+    chatInput.disabled = false;
+    sendButton.disabled = false;
+    chatInput.focus();
 }
 
 // Load course statistics
