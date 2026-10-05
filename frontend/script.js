@@ -17,10 +17,36 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     
+    setupThemeToggle();
     setupEventListeners();
     createNewSession();
     loadCourseStats();
 });
+
+// Theme toggle (dark is the default; choice persists in localStorage)
+function setupThemeToggle() {
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+
+    const currentTheme = () => root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+
+    const updateLabel = () => {
+        const next = currentTheme() === 'light' ? 'dark' : 'light';
+        toggle.setAttribute('aria-label', `Switch to ${next} theme`);
+    };
+
+    updateLabel();
+
+    toggle.addEventListener('click', () => {
+        const next = currentTheme() === 'light' ? 'dark' : 'light';
+        // Enable color transitions only during the switch so they don't affect other interactions
+        root.classList.add('theme-transition');
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        updateLabel();
+        setTimeout(() => root.classList.remove('theme-transition'), 400);
+    });
+}
 
 // Event Listeners
 function setupEventListeners() {
