@@ -73,10 +73,8 @@ html.theme-transition *::after {
 
 /* Theme Toggle Button */
 .theme-toggle {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 100;
+    position: relative;
+    flex-shrink: 0;
     width: 44px;
     height: 44px;
     padding: 0;
@@ -154,9 +152,15 @@ body {
     padding: 0;
 }
 
-/* Header - Hidden */
+/* Header */
 header {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
@@ -172,7 +176,7 @@ header h1 {
 .subtitle {
     font-size: 0.95rem;
     color: var(--text-secondary);
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 /* Main Content Area with Sidebar */
